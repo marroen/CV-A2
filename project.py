@@ -1,5 +1,6 @@
 import cv2 as cv
 import numpy as np
+import os
 import glob
 from CalibrationInstance import CalibrationInstance
 import util
@@ -10,20 +11,26 @@ stride = 44 # mm
 # Termination criteria
 criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
-# Prepare object points on a 7x7 grid, like (0,0,0), (1,0,0), (2,0,0) ....,(7,7,0)
-objp = np.zeros((7*7,3), np.float32)
-objp[:,:2] = np.mgrid[0:7,0:7].T.reshape(-1,2) * stride
-axis_points = np.float32([[stride*4,0,0], [0,stride*4,0], [0,0,-stride*4]]).reshape(-1,3)
-cube_points = np.float32([
-          [0         , 0         , 0          ],
-          [2 * stride, 0         , 0          ],
-          [2 * stride, 2 * stride, 0          ],
-          [0         , 2 * stride, 0          ],
-          [0         , 0         , -2 * stride],
-          [2 * stride, 0         , -2 * stride],
-          [2 * stride, 2 * stride, -2 * stride],
-          [0         , 2 * stride, -2 * stride]
-      ])
+#global grid, objp, axis_points, cube_points
+
+# Initialize points for calibration
+def initialize_points(rows, cols, stride):
+    global grid, objp, axis_points, cube_points
+    # Prepare object points on a 7x7 grid, like (0,0,0), (1,0,0), (2,0,0) ....,(7,7,0)
+    grid = (cols, rows)
+    objp = np.zeros((cols*rows,3), np.float32)
+    objp[:,:2] = np.mgrid[0:cols,0:rows].T.reshape(-1,2) * stride
+    axis_points = np.float32([[stride*4,0,0], [0,stride*4,0], [0,0,-stride*4]]).reshape(-1,3)
+    cube_points = np.float32([
+            [0         , 0         , 0          ],
+            [2 * stride, 0         , 0          ],
+            [2 * stride, 2 * stride, 0          ],
+            [0         , 2 * stride, 0          ],
+            [0         , 0         , -2 * stride],
+            [2 * stride, 0         , -2 * stride],
+            [2 * stride, 2 * stride, -2 * stride],
+            [0         , 2 * stride, -2 * stride]
+        ])
  
 # Arrays to store object points and image points for calibration from all images
 points_25 = {} # 'image_fname: (objpoints, imgpoints)
@@ -31,6 +38,7 @@ points_10 = {}
 points_5  = {}
  
 # Sort test images
+global images
 images = sorted(glob.glob('media/*.jpg') + glob.glob('media/*.jpeg'))
 
 # Flags for corner detection
@@ -39,6 +47,7 @@ flags = cv.CALIB_CB_EXHAUSTIVE + cv.CALIB_CB_ACCURACY
 # Initialize calibration variables
 ret, matrix, distortion_coef, rotation_vecs, translation_vecs = None, None, None, None, None
 
+# Initialize display images for manual calibration
 clicked_points = []
 
 # Function called upon mouse click
@@ -155,9 +164,77 @@ def preprocessing(img):
 
     return processed_img
 
+# Automatically sample N frames from a video file given its path
+def sample_frames(video_path, num_samples):
+    # Determine output directory from video path
+    output_dir = os.path.dirname(video_path)
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Check for existing numbered JPG files
+    existing_files = []
+    for filename in os.listdir(output_dir):
+        if filename.endswith('.jpg') and filename.split('.')[0].isdigit():
+            existing_files.append(filename)
+    
+    # Sort files numerically
+    existing_files.sort(key=lambda x: int(x.split('.')[0]))
+    
+    # Return existing files if we have enough
+    if len(existing_files) >= num_samples:
+        return [os.path.join(output_dir, f) for f in existing_files[:num_samples]]
+    
+    # If not enough, proceed with sampling
+    cap = cv.VideoCapture(video_path)
+    if not cap.isOpened():
+        print("Error: Could not open video file.")
+        return []
+    
+    total_frames = int(cap.get(cv.CAP_PROP_FRAME_COUNT))
+    if total_frames == 0:
+        print("Error: Video contains 0 frames.")
+        cap.release()
+        return []
+    
+    # Calculate sampling interval
+    step = max(1, total_frames // num_samples)
+    sampled_frames = []
+    
+    # Collect frames
+    for i in range(num_samples):
+        cap.set(cv.CAP_PROP_POS_FRAMES, i * step)
+        ret, frame = cap.read()
+        if ret:
+            sampled_frames.append(frame)
+        else:
+            break
+    cap.release()
+    
+    # Generate non-conflicting filenames
+    existing_numbers = set(int(f.split('.')[0]) for f in existing_files)
+    file_numbers = []
+    current = 1
+    while len(file_numbers) < len(sampled_frames):
+        if current not in existing_numbers:
+            file_numbers.append(current)
+        current += 1
+    
+    # Save frames and collect paths
+    saved_files = []
+    for number, frame in zip(file_numbers, sampled_frames):
+        filename = os.path.join(output_dir, f"{number}.jpg")
+        cv.imwrite(filename, frame)
+        saved_files.append(filename)
+    
+    return existing_files[:len(existing_files)] + saved_files[:num_samples - len(existing_files)]
+
 # Retrieve 2D and 3D points from chessboard images
-def get_all_points(run):
+def get_all_points(run, rows, cols, stride, video_path=None):
+    global images
+    initialize_points(rows, cols, stride)
     found = 0 #stores how many images are successfully processed
+
+    if (video_path):
+        images = sample_frames(video_path, run)
 
     for fname in images:
         _, _, new_found, _ = get_points(run, fname, found)
@@ -171,6 +248,15 @@ def get_all_points(run):
         
     print("\nSuccessfully processed " + str(found) + " images.")
     cv.destroyAllWindows()
+    points = []
+    if run == 25:
+        points = points_25
+    elif run == 10:
+        points = points_10
+    elif run == 5:
+        points = points_5
+    return points
+
 
 # Retrieve 2D and 3D points from chessboard images
 def get_points(run, fname, found):
@@ -182,7 +268,7 @@ def get_points(run, fname, found):
     preprocessed = preprocessing(img)
 
     # Find the chess board corners  
-    ret, corners = cv.findChessboardCornersSB(preprocessed, (7,7), flags=flags)
+    ret, corners = cv.findChessboardCornersSB(preprocessed, grid, flags=flags)
 
     # If found, add object points, image points (after refining them)
     if ret:
@@ -199,7 +285,7 @@ def get_points(run, fname, found):
 
         # Draw and display the corners
         draw_img = img.copy()
-        cv.drawChessboardCorners(draw_img, (7,7), refined_corners, ret)
+        cv.drawChessboardCorners(draw_img, grid, refined_corners, ret)
         cv.imshow('img', draw_img)
         cv.waitKey(500)
     else:
@@ -212,14 +298,14 @@ def get_points(run, fname, found):
         # Define 4 corners of the ideal 7x7 grid (2D!)
         ideal_manual_points = np.array([
             [0, 0],    # top-left
-            [6, 0],    # top-right (7x7 grid has 0-6 in x)
-            [6, 6],    # bottom-right
-            [0, 6]     # bottom-left
+            [grid[0]-1, 0],    # top-right (7x7 grid has 0-6 in x)
+            [grid[0]-1, grid[1]-1],    # bottom-right
+            [0, grid[1]-1]     # bottom-left
         ], dtype=np.float32).reshape(-1, 1, 2)
 
         # Compute homography
         H, _ = cv.findHomography(ideal_manual_points, interpolated_corners)
-        x, y = np.meshgrid(np.arange(7), np.arange(7))
+        x, y = np.meshgrid(np.arange(grid[0]), np.arange(grid[1]))
         ideal_grid = np.float32(np.vstack([x.ravel(), y.ravel()]).T).reshape(-1, 1, 2)
         interpolated_corners = cv.perspectiveTransform(ideal_grid, H).reshape(-1, 2)
 
@@ -229,7 +315,7 @@ def get_points(run, fname, found):
 
         # Draw and display the corners
         draw_img = img.copy()
-        cv.drawChessboardCorners(draw_img, (7,7), interpolated_corners, True)
+        cv.drawChessboardCorners(draw_img, grid, interpolated_corners, True)
         cv.imshow('img', draw_img)
         cv.waitKey(500)
     return points_for_fname
@@ -249,7 +335,7 @@ def calibrate_camera(points):
 
     # Caibrate camera
     ret, matrix, distortion_coef, rotation_vecs, translation_vecs = cv.calibrateCamera(all_objpoints, all_imgpoints, preprocessed.shape[::-1], None, None)
-    print("Intrinsic Camera Matrix:\n", matrix)
+    #print("Intrinsic Camera Matrix:\n", matrix)
 
     return CalibrationInstance(ret, matrix, distortion_coef, rotation_vecs, translation_vecs)
 
@@ -336,7 +422,7 @@ def project_cube(run, webcam=False):
                 break
             frame = cv.resize(frame, (int(frame.shape[1]/2), int(frame.shape[0]/2)))
             gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-            found, corners = cv.findChessboardCornersSB(gray, (7,7), flags=flags)
+            found, corners = cv.findChessboardCornersSB(gray, grid, flags=flags)
 
             if found:
                 # Solve PnP
@@ -347,7 +433,7 @@ def project_cube(run, webcam=False):
                     cube_proj, _ = cv.projectPoints(cube_points, rvec, tvec, matrix, distortion_coef)
                     cube_proj = cube_proj.reshape(-1, 2).astype(int)
                     
-                    # Draw cube
+                    # Draw cube TODO: generalize for all grids
                     edges = [(0,1),(1,2),(2,3),(3,0),
                             (4,5),(5,6),(6,7),(7,4),
                             (0,4),(1,5),(2,6),(3,7)]
@@ -394,7 +480,7 @@ def project_cube(run, webcam=False):
       img = draw_cube(img, refined_corners, cube_imgpts, fname, dist)
 
       # Draw the chessboard corners on the image (using the first detected corners).
-      img = cv.drawChessboardCorners(img, (7,7), test_points[1], True)
+      img = cv.drawChessboardCorners(img, grid, test_points[1], True)
 
       cv.imshow('img', img)
       k = cv.waitKey(0) & 0xFF

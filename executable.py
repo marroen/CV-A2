@@ -10,6 +10,10 @@ from assignment import set_voxel_positions, generate_grid, get_cam_positions, ge
 from engine.camera import Camera
 from engine.config import config
 
+# A1 imports
+import project
+from CalibrationInstance import CalibrationInstance, save_calibration, load_calibration
+
 cube, hdrbuffer, blurbuffer, lastPosX, lastPosY = None, None, None, None, None
 firstTime = True
 window_width, window_height = config['window_width'], config['window_height']
@@ -42,6 +46,30 @@ def draw_objs(obj, program, perspective, light_pos, texture, normal, specular, d
 
     obj.draw_multiple(program)
 
+# Get camera intrinsics with code from A1, and save to calibration files per camera
+def get_intrinsics():
+    rows = 6
+    cols = 8
+    stride = 115
+    
+    # Get all points from each camera
+    cam1_points = project.get_all_points(25, rows, cols, stride, video_path='data/cam1/intrinsics.avi')
+    cam2_points = project.get_all_points(25, rows, cols, stride, video_path='data/cam2/intrinsics.avi')
+    cam3_points = project.get_all_points(25, rows, cols, stride, video_path='data/cam3/intrinsics.avi')
+    cam4_points = project.get_all_points(25, rows, cols, stride, video_path='data/cam4/intrinsics.avi')
+
+    # Calibrate each camera and save to file
+    cam1_calib = project.calibrate_camera(cam1_points)
+    save_calibration('data/cam1', cam1_calib)
+    cam2_calib = project.calibrate_camera(cam2_points)
+    save_calibration('data/cam2', cam2_calib)
+    cam3_calib = project.calibrate_camera(cam3_points)
+    save_calibration('data/cam3', cam3_calib)
+    cam4_calib = project.calibrate_camera(cam4_points)
+    save_calibration('data/cam4', cam4_calib)
+
+    
+
 
 def main():
     global hdrbuffer, blurbuffer, cube, window_width, window_height
@@ -49,6 +77,10 @@ def main():
     if not glfw.init():
         print('Failed to initialize GLFW.')
         return
+    
+    #get_intrinsics()
+
+    return
 
     glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
     glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
