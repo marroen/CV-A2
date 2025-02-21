@@ -31,6 +31,7 @@ def initialize_points(rows, cols, stride):
             [2 * stride, 2 * stride, -2 * stride],
             [0         , 2 * stride, -2 * stride]
         ])
+    return (grid, objp, axis_points, cube_points)
  
 # Arrays to store object points and image points for calibration from all images
 points_25 = {} # 'image_fname: (objpoints, imgpoints)
@@ -132,12 +133,11 @@ def find_roll_pitch_yaw(R):
 
     return np.degrees([roll, pitch, yaw])  # Return values in degrees
 
-# Calculates the distance from the world origin to the camera
-def solvepnp_vectors(fname):
-    global matrix, distortion_coef
+# Calculates the distance from the world origin to the camera NOTE: wrong implementation, was hardcoded for points_25
+def solvepnp_vectors(fname, points, matrix, distortion_coef):
 
     # Gets rotation and translation vectors from solvePNP
-    success, rvec, tvec = cv.solvePnP(points_25[fname][0], points_25[fname][1], matrix, distortion_coef)
+    success, rvec, tvec = cv.solvePnP(points[fname][0], points[fname][1], matrix, distortion_coef)
 
     if success:
       return rvec, tvec
@@ -165,7 +165,7 @@ def preprocessing(img):
     return processed_img
 
 # Automatically sample N frames from a video file given its path
-def sample_frames(video_path, num_samples):
+def sample_frames(video_path, num_samples, calibration=False):
     # Determine output directory from video path
     output_dir = os.path.dirname(video_path)
     os.makedirs(output_dir, exist_ok=True)
@@ -180,7 +180,7 @@ def sample_frames(video_path, num_samples):
     existing_files.sort(key=lambda x: int(x.split('.')[0]))
     
     # Return existing files if we have enough
-    if len(existing_files) >= num_samples:
+    if calibration and len(existing_files) >= num_samples:
         return [os.path.join(output_dir, f) for f in existing_files[:num_samples]]
     
     # If not enough, proceed with sampling
@@ -228,13 +228,13 @@ def sample_frames(video_path, num_samples):
     return existing_files[:len(existing_files)] + saved_files[:num_samples - len(existing_files)]
 
 # Retrieve 2D and 3D points from chessboard images
-def get_all_points(run, rows, cols, stride, video_path=None):
+def get_all_points(run, rows, cols, stride, video_path=None, calibration=False):
     global images
     initialize_points(rows, cols, stride)
     found = 0 #stores how many images are successfully processed
 
     if (video_path):
-        images = sample_frames(video_path, run)
+        images = sample_frames(video_path, run, calibration)
 
     for fname in images:
         _, _, new_found, _ = get_points(run, fname, found)
@@ -353,29 +353,29 @@ def draw_cube(img, corners, imgpts, fname, dist, orient=0, rot=255):
     imgpts = np.int32(imgpts).reshape(-1,2)
 
     #gets the rotation vectors from solvepnp
-    rvec, _ = solvepnp_vectors(fname)
+    #rvec, _ = solvepnp_vectors(fname)
 
     # Converts the rotation vectors to an object rotation matrix
-    R, _ = cv.Rodrigues(rvec)
+    #R, _ = cv.Rodrigues(rvec)
 
-    roll, pitch, yaw = find_roll_pitch_yaw(R)
+    #roll, pitch, yaw = find_roll_pitch_yaw(R)
     #print("roll, pitch, yaw):", roll, pitch, yaw)
 
     # Maps the values for yaw, pitch, and distance to HSV colorspace
     # When the board is directly facing the camera: yaw, pitch, roll = [0, 0, 0]
-    H = int(179 * (1 - (abs(yaw) / 90))) if abs(yaw) <= 90 else 0
-    S = int(255 * (1 - (abs(pitch) / 45))) if abs(pitch) < 45 else 0
-    V = int(255 * (1 - (dist / 4000))) if dist <= 4000 else 0
+    #H = int(179 * (1 - (abs(yaw) / 90))) if abs(yaw) <= 90 else 0
+    #S = int(255 * (1 - (abs(pitch) / 45))) if abs(pitch) < 45 else 0
+    #V = int(255 * (1 - (dist / 4000))) if dist <= 4000 else 0
 
     # Ensures HSV values are in a valid range
-    H = np.clip(H, 0, 179)
-    S = np.clip(S, 0, 255)
-    V = np.clip(V, 0, 255)
+    #H = np.clip(H, 0, 179)
+    #S = np.clip(S, 0, 255)
+    #V = np.clip(V, 0, 255)
 
     # Convert HSV to BGR
-    hsv_color = np.uint8([[[H, S, V]]])
-    bgr_color = cv.cvtColor(hsv_color, cv.COLOR_HSV2BGR)[0][0]
-    B, G, R = map(int, bgr_color)
+    #hsv_color = np.uint8([[[H, S, V]]])
+    #bgr_color = cv.cvtColor(hsv_color, cv.COLOR_HSV2BGR)[0][0]
+    #B, G, R = map(int, bgr_color)
 
     # base
     img = cv.drawContours(img, [imgpts[:4]], -1, (0,255,0), 1)
@@ -385,7 +385,7 @@ def draw_cube(img, corners, imgpts, fname, dist, orient=0, rot=255):
       img = cv.line(img, tuple(imgpts[i]), tuple(imgpts[j]), (255), 1)
 
     # top
-    img = cv.drawContours(img, [imgpts[4:]], -1, (B,G,R), -1)
+    img = cv.drawContours(img, [imgpts[4:]], -1, (0,255,0), -1)
 
     return img
 
@@ -393,14 +393,17 @@ def draw_cube(img, corners, imgpts, fname, dist, orient=0, rot=255):
 def project_cube(run, webcam=False):
     print("projecting")
     test_idx = 0
-    
+    points = []
     calibration = None
     if run == 25:
         calibration = calibrate_camera(points_25)
+        points = points_25
     elif run == 10:
         calibration = calibrate_camera(points_10)
+        points = points_10
     elif run == 5:
         calibration = calibrate_camera(points_5)
+        points = points_5
     else:
         print("Unsupported")
         return
@@ -463,7 +466,7 @@ def project_cube(run, webcam=False):
         return
 
       # Find and print distance from origin to camera
-      pnp_rvec, pnp_tvec = solvepnp_vectors(fname)
+      pnp_rvec, pnp_tvec = solvepnp_vectors(fname, points, calibration.matrix, calibration.distortion_coef)
       dist = np.linalg.norm(pnp_tvec)
       print(f"Distance to camera: {dist:.2f} mm")
 
