@@ -12,9 +12,9 @@ from assignment import set_voxel_positions, generate_grid, get_cam_positions, ge
 from engine.camera import Camera
 from engine.config import config
 
-# A1 imports
+# A2 import
 import project
-from CalibrationInstance import CalibrationInstance, save_calibration, load_calibration
+import calibration_processing
 
 cube, hdrbuffer, blurbuffer, lastPosX, lastPosY = None, None, None, None, None
 firstTime = True
@@ -50,76 +50,19 @@ def draw_objs(obj, program, perspective, light_pos, texture, normal, specular, d
 
     obj.draw_multiple(program)
 
-# Get camera intrinsics with code from A1, and save to calibration files per camera
-def get_intrinsics():
-    rows = 6
-    cols = 8
-    stride = 115
-    
-    # Get all points from each camera
-    cam1_points = project.get_all_points(25, rows, cols, stride, video_path='data/cam1/intrinsics.avi', calibration=True)
-    cam2_points = project.get_all_points(25, rows, cols, stride, video_path='data/cam2/intrinsics.avi', calibration=True)
-    cam3_points = project.get_all_points(25, rows, cols, stride, video_path='data/cam3/intrinsics.avi', calibration=True)
-    cam4_points = project.get_all_points(25, rows, cols, stride, video_path='data/cam4/intrinsics.avi', calibration=True)
-
-    # Calibrate each camera and save to file
-    cam1_calib = project.calibrate_camera(cam1_points)
-    save_calibration('data/cam1', cam1_calib)
-    cam2_calib = project.calibrate_camera(cam2_points)
-    save_calibration('data/cam2', cam2_calib)
-    cam3_calib = project.calibrate_camera(cam3_points)
-    save_calibration('data/cam3', cam3_calib)
-    cam4_calib = project.calibrate_camera(cam4_points)
-    save_calibration('data/cam4', cam4_calib)
-
-def get_extrinsics():
-    print("Getting extrinsics")
-    cam1_calib = load_calibration('data/cam1')
-    cam2_calib = load_calibration('data/cam2')
-    cam3_calib = load_calibration('data/cam3')
-    cam4_calib = load_calibration('data/cam4')
-
-    grid, objp, axis_points, cube_points = project.initialize_points(6, 8, 115)
-    #frame = project.sample_frames('data/cam1/checkerboard.avi', 1)[0]
-    frame = 'data/cam1/checkerboard.jpg'
-
-    # Automatically detect corners
-    test_points = project.get_points(25, frame, 0)
-
-    # Find and print distance from origin to camera
-    #pnp_rvec, pnp_tvec = project.solvepnp_vectors(frame, )
-    #dist = np.linalg.norm(pnp_tvec)
-    #print(f"Distance to camera: {dist:.2f} mm")
-
-    img = test_points[3] # Same img (halved) from where points are initially extracted
-    preprocessed = project.preprocessing(img)
-
-    refined_corners = cv.cornerSubPix(preprocessed, test_points[1], (11,11), (-1,-1), criteria)
-
-    ret, rvec, tvec = cv.solvePnP(objp, refined_corners, cam1_calib.matrix, cam1_calib.distortion_coef)
-    axis_imgpts, _ = cv.projectPoints(axis_points, rvec, tvec, cam1_calib.matrix, cam1_calib.distortion_coef)
-    cube_imgpts, _ = cv.projectPoints(cube_points, rvec, tvec, cam1_calib.matrix, cam1_calib.distortion_coef)
-
-    img = project.draw_axis(img, refined_corners, axis_imgpts)
-    img = project.draw_cube(img, refined_corners, cube_imgpts, frame, 0.5)
-
-    # Draw the chessboard corners on the image (using the first detected corners).
-    img = cv.drawChessboardCorners(img, grid, test_points[1], True)
-
-    cv.imshow('img', img)
-    cv.waitKey(0)
-    cv.destroyAllWindows()
-
 
 def main():
+    
     global hdrbuffer, blurbuffer, cube, window_width, window_height
 
     if not glfw.init():
         print('Failed to initialize GLFW.')
         return
-    
-    #get_intrinsics()
-    get_extrinsics()
+
+    # A2 Task 1
+    #calibration_processing.save_calibration()
+    # Save to config.xml
+    calibration_processing.save_combined_config()
     return
 
     glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)

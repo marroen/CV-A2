@@ -156,11 +156,11 @@ def preprocessing(img):
     processed_img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
     # Apply CLAHE preprocessing for increased contrast and glare reduction
-    #clahe = cv.createCLAHE(clipLimit=20.0, tileGridSize=(8, 8))
-    #processed_img = clahe.apply(processed_img)
+    clahe = cv.createCLAHE(clipLimit=20.0, tileGridSize=(8, 8))
+    processed_img = clahe.apply(processed_img)
 
     # Apply slight gaussian blur to reduce the effect of glare on edge detection
-    #processed_img = cv.GaussianBlur(processed_img, (5, 5), 0)
+    processed_img = cv.GaussianBlur(processed_img, (5, 5), 0)
 
     return processed_img
 
@@ -353,29 +353,29 @@ def draw_cube(img, corners, imgpts, fname, dist, orient=0, rot=255):
     imgpts = np.int32(imgpts).reshape(-1,2)
 
     #gets the rotation vectors from solvepnp
-    #rvec, _ = solvepnp_vectors(fname)
+    rvec, _ = solvepnp_vectors(fname)
 
     # Converts the rotation vectors to an object rotation matrix
-    #R, _ = cv.Rodrigues(rvec)
+    R, _ = cv.Rodrigues(rvec)
 
-    #roll, pitch, yaw = find_roll_pitch_yaw(R)
-    #print("roll, pitch, yaw):", roll, pitch, yaw)
+    roll, pitch, yaw = find_roll_pitch_yaw(R)
+    print("roll, pitch, yaw):", roll, pitch, yaw)
 
     # Maps the values for yaw, pitch, and distance to HSV colorspace
     # When the board is directly facing the camera: yaw, pitch, roll = [0, 0, 0]
-    #H = int(179 * (1 - (abs(yaw) / 90))) if abs(yaw) <= 90 else 0
-    #S = int(255 * (1 - (abs(pitch) / 45))) if abs(pitch) < 45 else 0
-    #V = int(255 * (1 - (dist / 4000))) if dist <= 4000 else 0
+    H = int(179 * (1 - (abs(yaw) / 90))) if abs(yaw) <= 90 else 0
+    S = int(255 * (1 - (abs(pitch) / 45))) if abs(pitch) < 45 else 0
+    V = int(255 * (1 - (dist / 4000))) if dist <= 4000 else 0
 
     # Ensures HSV values are in a valid range
-    #H = np.clip(H, 0, 179)
-    #S = np.clip(S, 0, 255)
-    #V = np.clip(V, 0, 255)
+    H = np.clip(H, 0, 179)
+    S = np.clip(S, 0, 255)
+    V = np.clip(V, 0, 255)
 
     # Convert HSV to BGR
-    #hsv_color = np.uint8([[[H, S, V]]])
-    #bgr_color = cv.cvtColor(hsv_color, cv.COLOR_HSV2BGR)[0][0]
-    #B, G, R = map(int, bgr_color)
+    hsv_color = np.uint8([[[H, S, V]]])
+    bgr_color = cv.cvtColor(hsv_color, cv.COLOR_HSV2BGR)[0][0]
+    B, G, R = map(int, bgr_color)
 
     # base
     img = cv.drawContours(img, [imgpts[:4]], -1, (0,255,0), 1)
