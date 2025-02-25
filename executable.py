@@ -62,7 +62,7 @@ def main():
     # A2 Task 1
     #calibration_processing.save_calibration()
     # Save to config.xml
-    calibration_processing.save_combined_config()
+    #calibration_processing.save_combined_config()
     return
 
     glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)

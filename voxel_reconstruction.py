@@ -5,10 +5,9 @@ import numpy as np
 from background_subtraction import compute_gaussian_model
 from background_subtraction import background_subtraction
 
-
 # Background and foregrond videos
-background_vid = cv.VideoCapture("data/cam1/background.avi")
-foreground_vid = cv.VideoCapture("data/cam1/video.avi")
+background_vid = cv.VideoCapture("data/cam2/background.avi")
+foreground_vid = cv.VideoCapture("data/cam2/video.avi")
 
 # Video resolution
 width = 644

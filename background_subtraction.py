@@ -2,15 +2,6 @@
 import cv2 as cv
 import numpy as np
 
-# Background and foregrond videos
-background_vid = cv.VideoCapture("data/cam1/background.avi")
-foreground_vid = cv.VideoCapture("data/cam1/video.avi")
-
-# Video resolution
-width = 644
-height = 486
-resolution = (width, height)
-
 # Computes the gaussian distribution given EITHER a video OR an hsv_frames array and stores this in the given background model
 def compute_gaussian_model(resolution, vid=None, hsv_frames=None):
 
@@ -178,17 +169,9 @@ def background_subtraction_buffer(background_model, vid, resolution):
     vid.release()
     print(f"\nProcessed {frame_count} frames")
 
-
-# Compute the background model for cam1
-cam1_background_model = compute_gaussian_model(resolution, vid=background_vid)
-
-# Use the cam1 background model for background subtraction on the foreground video
-background_subtraction(cam1_background_model, foreground_vid, resolution)
-#background_subtraction_buffer(cam1_background_model, foreground_vid, resolution)
-
-
 # TEST to see if the background model worked
 # Print mean and variance for the test pixels
+'''
 test_pixels = [(100, 100), (200, 400), (21, 364)]
 for y, x in test_pixels:
     mean_H, mean_S, mean_V = cam1_background_model[y, x, :3]
@@ -198,3 +181,4 @@ for y, x in test_pixels:
     print(f"  HSV mean: ({mean_H:.3f}, {mean_S:.3f}, {mean_V:.3f})")
     print(f"  HSV variance: ({var_H:.3f}, {var_S:.3f}, {var_V:.3f})")
     print("-" * 60)
+'''
