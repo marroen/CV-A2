@@ -175,3 +175,26 @@ def save_combined_config():
     
     fs.release()
     print("Combined config saved to config.xml")
+
+def load_config(config_path="config.xml"):
+  """Load combined calibration config for all cameras"""
+  if not os.path.exists(config_path):
+      raise FileNotFoundError(f"Config file {config_path} not found")
+
+  fs = cv.FileStorage(config_path, cv.FILE_STORAGE_READ)
+  cameras = {}
+
+  for cam_id in range(1, 5):  # For cameras 1-4
+      node = fs.getNode(f"camera{cam_id}")
+      if node.empty():
+          continue  # Skip missing cameras
+
+      cameras[cam_id] = {
+          "matrix": node.getNode("camera_matrix").mat(),
+          "dist_coef": node.getNode("distortion_coefficients").mat().flatten(),
+          "rvec": node.getNode("rotation_vector").mat(),
+          "tvec": node.getNode("translation_vector").mat()
+      }
+
+  fs.release()
+  return cameras
