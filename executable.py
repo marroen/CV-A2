@@ -60,17 +60,9 @@ def main():
         return
 
     # A2 Task 1
-    #calibration_processing.save_calibration()
-    # Save to config.xml
+    
     #calibration_processing.save_combined_config()
-    calib_data = calibration_processing.load_config()
-    # Access parameters for camera 3
-    cam3 = calib_data.get(3)
-    if cam3:
-        print(f"Camera 3 Matrix:\n{cam3['matrix']}")
-        print(f"Camera 3 Distortion Coefficients: {cam3['dist_coef']}")
-        print(f"Camera 3 Rotation Vector: {cam3['rvec'].T}")
-        print(f"Camera 3 Translation Vector: {cam3['tvec'].T}")
+    #calib_data = calibration_processing.load_config()
 
     # END A2 Task 1
 
