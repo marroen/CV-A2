@@ -58,7 +58,7 @@ def iterate_through_voxels(grid):
     for voxel in grid:
         for cam in cams:
             project_point(voxel_centerpoint)
-            if NOT foreground_point_is_white(cam)
+            if NOT pixel_is_white(silhouettes[cam], frame_num, y, x)
                 break
 
 '''
