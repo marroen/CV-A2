@@ -2,7 +2,7 @@
 import cv2 as cv
 import numpy as np
 
-# Computes the gaussian distribution given EITHER a video OR an hsv_frames array and stores this in the given background model
+# Computes the gaussian distribution given EITHER a video OR an hsv_frames array and returns the gaussian model
 def compute_gaussian_model(resolution, vid=None, hsv_frames=None):
 
     width, height = resolution
@@ -15,32 +15,25 @@ def compute_gaussian_model(resolution, vid=None, hsv_frames=None):
     gaussian_model[:, :, 3:] = 1e-6
 
     # If passed a video, process video
-    frame_count = 0
     if hsv_frames is None:
         hsv_frames = []
+        frame_count = 0
 
         # Iterate through each frame
         while True:
 
             success, frame = vid.read()  # Reads the next frame
             if not success:
-                cv.imshow("Frame", last_frame)
-                key = cv.waitKey(0)  # Waits for keypress
-                if key == 27:  # Halt if ESC pressed
-                    exit()
                 break  # Break when video ends
 
-            # Convert frame to HSV
-            hsv_frame = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
+            hsv_frame = cv.cvtColor(frame, cv.COLOR_BGR2HSV) # Convert frame to HSV
+            hsv_frames.append(hsv_frame.copy()) # Append frame to array
 
-            # Append frame to array
-            hsv_frames.append(hsv_frame.copy())
-
-            print(f"Processing frame {frame_count}")
-
+            #print(f"compute_gaussian_model: Processing frame {frame_count}")
             frame_count += 1
-            last_frame = frame
-            vid.release()
+        
+        vid.release()
+        print(f"compute_gaussian_model: Processed {frame_count} frames\n")
 
     # Convert frames to numpy array
     # Eg. [num_frames, height, width, [H, S, V]]
@@ -51,15 +44,15 @@ def compute_gaussian_model(resolution, vid=None, hsv_frames=None):
     gaussian_model[:, :, :3] = np.mean(hsv_frames, axis=0)
     gaussian_model[:, :, 3:] = np.var(hsv_frames, axis=0)
 
-
-    print(f"\nProcessed {frame_count} frames")
     return gaussian_model
 
 # Performes background subtraction on the given video compared to the given background model
 def background_subtraction(background_model, vid, resolution):
 
     width, height = resolution
-    hsv_frames = []
+    foreground_silhouettes = [] # Stores processed foreground silhouette frames
+
+    threshold = 20  # TODO: automate number of standard deviations
 
     # Iterate through each frame
     frame_count = 0
@@ -68,11 +61,10 @@ def background_subtraction(background_model, vid, resolution):
         success, frame = vid.read()  # Reads the next frame
         if not success:
             break  # Break when video ends
+        elif frame_count >= 100:
+            break # Break when 100 frames are processed
 
-        # Convert frame to HSV
-        hsv_frame = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
-
-        threshold = 20  # Number of standard deviations
+        hsv_frame = cv.cvtColor(frame, cv.COLOR_BGR2HSV)  #Convert frame to HSV
 
         # Difference of frame HSV and background mean HSV
         # Eg. (foreground mean HSV [05, 20, 50]) - (background mean HSV [50, 50, 05]) = [45, 30, 0]
@@ -87,22 +79,25 @@ def background_subtraction(background_model, vid, resolution):
 
         # Initializes foreground frame with all 0's
         foreground_frame = np.zeros(mahalanobis_dist.shape, dtype=np.uint8)
-        foreground_frame[mahalanobis_dist > threshold] = 255 # Set any pixel outide threshold to white
 
+        # Set any pixel outide threshold to white
+        foreground_frame[mahalanobis_dist > threshold] = 255
+
+        '''
         cv.imshow("Foreground", foreground_frame)
         key = cv.waitKey(0)  # Waits for keypress
         if key == 27:  # Halt if ESC pressed
             exit()
+        '''
 
-        # Append frame to array
-        hsv_frames.append(hsv_frame.copy())
+        foreground_silhouettes.append(foreground_frame.copy()) # Append frame to array
 
-        print(f"Processing frame {frame_count}")
-
+        #print(f"background_subtraction: Processing frame {frame_count}")
         frame_count += 1
 
     vid.release()
-    print(f"\nProcessed {frame_count} frames")
+    print(f"background_subtraction: Processed {frame_count} frames\n")
+    return(foreground_silhouettes)
 
 # IN PROGRESS
 # IDEA: get the gaussian distribution of the 5 frame buffer and find distance to background
@@ -110,8 +105,10 @@ def background_subtraction(background_model, vid, resolution):
 def background_subtraction_buffer(background_model, vid, resolution):
 
     width, height = resolution
-    hsv_frames = []
+    foreground_silhouettes = [] # Stores processed foreground silhouette frames
     buffer_size = 5
+
+    threshold = 20  # TODO: automate number of standard deviations
 
     # Iterate through each frame
     frame_count = 0
@@ -120,22 +117,25 @@ def background_subtraction_buffer(background_model, vid, resolution):
         success, frame = vid.read()  # Reads the next frame
         if not success:
             break  # Break when video ends
-
-        # Convert frame to HSV
-        hsv_frame = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
+        elif frame_count >= 100:
+            break # Break when 100 frames are processed
 
         # Keep only the last 5 frames in buffer
         if len(hsv_frames) > 5:
             hsv_frames.pop(0)
 
+        hsv_frame = cv.cvtColor(frame, cv.COLOR_BGR2HSV)  #Convert frame to HSV
+
+        # Difference of frame HSV and background mean HSV
+        # Eg. (foreground mean HSV [05, 20, 50]) - (background mean HSV [50, 50, 05]) = [45, 30, 0]
+        mean_diff = hsv_frame - background_model[:, :, :3]
+
         # Wait until we have at least 5 frames
         if len(hsv_frames) < 5:
-            print(f"Skipping frame {frame_count} (not enough frames yet)")
+            print(f"Skipping frame {frame_count} (need at least 5)")
             hsv_frames.append(hsv_frame.copy())
             frame_count += 1
             continue
-
-        threshold = 20  # Number of standard deviations
 
         foreground_model = compute_gaussian_model(resolution, hsv_frames=np.array(hsv_frames))
 
@@ -152,26 +152,29 @@ def background_subtraction_buffer(background_model, vid, resolution):
 
         # Initializes foreground frame with all 0's
         foreground_frame = np.zeros(mahalanobis_dist.shape, dtype=np.uint8)
-        foreground_frame[mahalanobis_dist > threshold] = 255 # Set any pixel outide threshold to white
 
+        # Set any pixel outide threshold to white
+        foreground_frame[mahalanobis_dist > threshold] = 255
+
+        '''
         cv.imshow("Foreground", foreground_frame)
         key = cv.waitKey(0)  # Waits for keypress
         if key == 27:  # Halt if ESC pressed
             exit()
+        '''
 
-        # Append frame to array
-        hsv_frames.append(hsv_frame.copy())
+        foreground_silhouettes.append(foreground_frame.copy()) # Append frame to array
 
-        print(f"Processing frame {frame_count}")
-
+        #print(f"background_subtraction: Processing frame {frame_count}")
         frame_count += 1
 
     vid.release()
-    print(f"\nProcessed {frame_count} frames")
+    print(f"background_subtraction: Processed {frame_count} frames\n")
+    return(foreground_silhouettes)
 
+'''
 # TEST to see if the background model worked
 # Print mean and variance for the test pixels
-'''
 test_pixels = [(100, 100), (200, 400), (21, 364)]
 for y, x in test_pixels:
     mean_H, mean_S, mean_V = cam1_background_model[y, x, :3]
