@@ -35,3 +35,40 @@ def display_video_frames(frames, fps=30):
     cv.destroyAllWindows()
 
 display_video_frames(silhouettes["cam4"])
+
+# Initialize 100x100x100 voxel grid=
+GRID_SIZE = 100    # Number of voxels per dimension
+VOXEL_SIZE = 0.8   # Physical size of each voxel cube
+SPACING = 0.2      # Space between voxels
+PADDING = 10.0     # Padding around grid for visualization
+
+# Calculate total grid dimensions
+# Calculate grid dimensions
+total_offset = (GRID_SIZE - 1) * (VOXEL_SIZE + SPACING) / 2
+origin = [-total_offset - PADDING, 
+          -total_offset - PADDING, 
+          -total_offset - PADDING]
+
+# Generate ALL voxel positions (regardless of occupancy)
+voxel_positions = np.zeros((GRID_SIZE, GRID_SIZE, GRID_SIZE, 3), dtype=np.float32)
+
+for i in range(GRID_SIZE):
+    for j in range(GRID_SIZE):
+        for k in range(GRID_SIZE):
+            x = origin[0] + i * (VOXEL_SIZE + SPACING)
+            y = origin[1] + j * (VOXEL_SIZE + SPACING)
+            z = origin[2] + k * (VOXEL_SIZE + SPACING)
+            voxel_positions[i, j, k] = [x, y, z]
+
+# Convert to flat array of positions (shape: [1000000, 3])
+all_voxel_centers = voxel_positions.reshape(-1, 3)
+
+def voxel_grid():
+    print("Voxel Grid")
+    P = all_voxel_centers
+    print(silhouettes['cam1'][0])
+    print(silhouettes['cam1'][0].shape)
+    F = silhouettes['cam1']
+    #for p in P:
+        #print(p)
+voxel_grid()
