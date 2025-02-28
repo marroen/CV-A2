@@ -64,7 +64,7 @@ def background_subtraction(background_model, vid, resolution):
         elif frame_count >= 100:
             break # Break when 100 frames are processed
 
-        hsv_frame = cv.cvtColor(frame, cv.COLOR_BGR2HSV)  #Convert frame to HSV
+        hsv_frame = cv.cvtColor(frame, cv.COLOR_BGR2HSV) #Convert frame to HSV
 
         # Difference of frame HSV and background mean HSV
         # Eg. (foreground mean HSV [05, 20, 50]) - (background mean HSV [50, 50, 05]) = [45, 30, 0]

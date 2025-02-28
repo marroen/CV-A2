@@ -72,3 +72,29 @@ def voxel_grid():
     #for p in P:
         #print(p)
 voxel_grid()
+
+# Given a silhouettes array, frame number, and pixel coordinate, check if the pixel is white
+def pixel_is_white(silhouettes, frame_number, y, x):
+    
+    frame = silhouettes[frame_number]
+
+    # Return true if the pixel is white
+    if frame[y, x] == 255:
+        return True
+    else:
+        return False
+
+# TEST the pixel values
+pixel_value = pixel_is_white(silhouettes["cam4"], 10, 200, 250)
+print(pixel_value)
+
+'''
+# Pseudocode for voxel iteration
+def iterate_through_voxels(grid):
+    for voxel in grid:
+        for cam in cams:
+            project_point(voxel_centerpoint)
+            if NOT pixel_is_white(silhouettes[cam], frame_num, y, x)
+                break
+
+'''
