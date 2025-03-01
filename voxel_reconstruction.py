@@ -55,42 +55,41 @@ voxel_dtype = np.dtype([
     ('occupied', np.bool_)
 ])
 
+'''
 # Initialize voxel grid parameters
 GRID_WIDTH = 200   # X-axis (left-right)
 GRID_DEPTH = 150    # Y-axis (front-back)
 GRID_HEIGHT = 300   # Z-axis (vertical)
 VOXEL_SIZE = 6.0   # Physical size of each voxel cube
 SPACING = 6.0      # Space between voxels
-PADDING = 10.0     # Padding around grid for visualization
+#PADDING = 10.0     # Padding around grid for visualization'''
 
-# Calculate grid origins PER AXIS (centered with padding)
-def calculate_origin(grid_dim, voxel_size, spacing, padding):
-    total_size = grid_dim * (voxel_size + spacing) - spacing
-    return -total_size/2 - padding
+# Grid dimensions (voxel counts)
+GRID_WIDTH = 150    # X-axis (left-right)
+GRID_DEPTH = 175    # Y-axis (forward-back)
+GRID_HEIGHT = 300   # Z-axis (vertical)
+ANCHOR = np.array([0.0, 0.0, 0.0])  # World coordinates of bottom-front-left corner
 
-# X-axis (width)
-origin_x = calculate_origin(GRID_WIDTH, VOXEL_SIZE, SPACING, 20.0)
-# Y-axis (depth)
-origin_y = calculate_origin(GRID_DEPTH, VOXEL_SIZE, SPACING, 15.0)
-# Z-axis (height) - less padding at bottom for "ground"
-origin_z = calculate_origin(GRID_HEIGHT, VOXEL_SIZE, SPACING, 30.0) 
+# Voxel metrics (in meters)
+VOXEL_SIZE = 6.0    # Size of each voxel cube
+SPACING = 0.0       # No spacing between voxels
 
 # Initialize voxel grid with proper dimensions
 voxels = np.zeros(GRID_WIDTH * GRID_DEPTH * GRID_HEIGHT, dtype=voxel_dtype)
 
-# Populate grid with human-centric coordinates
+# Key concept: Voxel indices increase AWAY from the anchor point
 index = 0
-step = VOXEL_SIZE + SPACING
 for i in range(GRID_WIDTH):
     for j in range(GRID_DEPTH):
         for k in range(GRID_HEIGHT):
-            voxels[index] = (
-                origin_x + i * step,  # X-coordinate
-                origin_y + j * step,  # Y-coordinate
-                origin_z + k * step,  # Z-coordinate (vertical)
-                False
-            )
+            # Calculate positions relative to anchor
+            x = ANCHOR[0] + i * VOXEL_SIZE  # X decreases (left in camera view)
+            y = ANCHOR[1] + j * VOXEL_SIZE  # Y increases (forward in camera view)
+            z = ANCHOR[2] - k * VOXEL_SIZE  # Z increases (upward from ground)
+            
+            voxels[index] = (x, y, z, False)
             index += 1
+
 
 # Usage example with camera alignment
 calib_data = load_config()
@@ -100,12 +99,7 @@ calib_data = load_config()
 cam_calib = calib_data.get(4)
 only_voxels = np.stack([voxels['x'], voxels['y'], voxels['z']], axis=1)
 projs, _ = cv.projectPoints(only_voxels.astype(np.float32), cam_calib['rvec'], cam_calib['tvec'], cam_calib['matrix'], cam_calib['dist_coef'])
-projs = projs.squeeze()
-
-# Calculate depths
-R, _ = cv.Rodrigues(cam_calib['rvec'])
-camera_coords = (R @ only_voxels.T).T + cam_calib['tvec'].T
-depths = camera_coords[:, 2]
+#projs = projs.squeeze()
 
 projs = projs.reshape(-1, 2)
 
@@ -120,8 +114,8 @@ for x, y in projs:  # Directly unpack x,y
 
 cv.imshow('img', output)
 cv.waitKey(0)
-cv.destroyAllWindows()
-'''
+cv.destroyAllWindows()'''
+
 
 def voxel_grid():
     print("Voxel Grid")
@@ -159,5 +153,6 @@ def voxel_grid():
                     y_c4 = round(projected[1])
                     if (pixel_is_white(silhouettes['cam4'], 0, x_c4, y_c4)):
                         p['occupied'] = True
+                        print("was on")
 
 voxel_grid()
