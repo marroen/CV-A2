@@ -37,7 +37,7 @@ def display_video_frames(frames, fps=120):
 for cam in cams:
     display_video_frames(silhouettes[cam])
 
-# Given a silhouettes array, frame number, and pixel coordinate, check if the pixel is white
+# Given a silhouettes array and pixel coordinate, check if the pixel is white
 def pixel_is_white(silhouettes, x, y):
     
     for i in range(100):
@@ -54,21 +54,38 @@ def pixel_is_white(silhouettes, x, y):
 
 # Define voxel data type
 voxel_dtype = np.dtype([
-    ('x', np.int32),
-    ('y', np.int32),
-    ('z', np.int32),
+    ('x', np.float32),
+    ('y', np.float32),
+    ('z', np.float32),
     ('occupied', np.bool_)
 ])
 
 # Grid dimensions (voxel counts)
+GRID_WIDTH = 10    # X-axis (left-right)
+GRID_DEPTH = 12    # Y-axis (forward-back)
+GRID_HEIGHT = 20   # Z-axis (vertical)
+VOXEL_SIZE = 100.0    # Size of each voxel cube
+
+GRID_WIDTH = 15    # X-axis (left-right)
+GRID_DEPTH = 18    # Y-axis (forward-back)
+GRID_HEIGHT = 30   # Z-axis (vertical)
+VOXEL_SIZE = 60.0    # Size of each voxel cube
+
 GRID_WIDTH = 150    # X-axis (left-right)
 GRID_DEPTH = 175    # Y-axis (forward-back)
 GRID_HEIGHT = 300   # Z-axis (vertical)
-ANCHOR = np.array([0.0, 0.0, 0.0])  # World coordinates of bottom-front-left corner
-
-# Voxel metrics (in meters)
 VOXEL_SIZE = 6.0    # Size of each voxel cube
-SPACING = 0.0       # No spacing between voxels
+
+GRID_WIDTH = 29    # X-axis (left-right)
+GRID_DEPTH = 29    # Y-axis (forward-back)
+GRID_HEIGHT = 39   # Z-axis (vertical)
+VOXEL_SIZE = 60.0    # Size of each voxel cube
+
+GRID_WIDTH = 15    # X-axis (left-right)
+GRID_DEPTH = 18    # Y-axis (forward-back)
+GRID_HEIGHT = 30   # Z-axis (vertical)
+VOXEL_SIZE = 60.0    # Size of each voxel cube
+ANCHOR = np.array([0.0, 0.0, 0.0])  # World coordinates of bottom-front-left corner
 
 # Initialize voxel grid with proper dimensions
 voxels = np.zeros(GRID_WIDTH * GRID_DEPTH * GRID_HEIGHT, dtype=voxel_dtype)
@@ -91,11 +108,70 @@ for i in range(GRID_WIDTH):
 calib_data = load_config()
 
 '''
-# TEST the voxel grid (VISUALIZATION)
+# TEST the voxel grid (VISUALIZATION) CAM1
+cam_calib = calib_data.get(1)
+only_voxels = np.stack([voxels['x'], voxels['y'], voxels['z']], axis=1)
+projs, _ = cv.projectPoints(only_voxels.astype(np.float32), cam_calib['rvec'], cam_calib['tvec'], cam_calib['matrix'], cam_calib['dist_coef'])
+
+projs = projs.reshape(-1, 2)
+
+
+# Draw voxel grid for debug
+img = cv.imread('data/cam1/checkerboard.jpg')
+output = img.copy()
+for x, y in projs:  # Directly unpack x,y
+    if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
+        cv.circle(output, (int(x), int(y)), 
+                    2, (0, 255, 0), -1)
+
+cv.imshow('img', output)
+cv.waitKey(0)
+cv.destroyAllWindows()
+
+# TEST the voxel grid (VISUALIZATION) CAM2
+cam_calib = calib_data.get(2)
+only_voxels = np.stack([voxels['x'], voxels['y'], voxels['z']], axis=1)
+projs, _ = cv.projectPoints(only_voxels.astype(np.float32), cam_calib['rvec'], cam_calib['tvec'], cam_calib['matrix'], cam_calib['dist_coef'])
+
+projs = projs.reshape(-1, 2)
+
+
+# Draw voxel grid for debug
+img = cv.imread('data/cam2/checkerboard.jpg')
+output = img.copy()
+for x, y in projs:  # Directly unpack x,y
+    if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
+        cv.circle(output, (int(x), int(y)), 
+                    2, (0, 255, 0), -1)
+
+cv.imshow('img', output)
+cv.waitKey(0)
+cv.destroyAllWindows()
+
+# TEST the voxel grid (VISUALIZATION) CAM3
+cam_calib = calib_data.get(3)
+only_voxels = np.stack([voxels['x'], voxels['y'], voxels['z']], axis=1)
+projs, _ = cv.projectPoints(only_voxels.astype(np.float32), cam_calib['rvec'], cam_calib['tvec'], cam_calib['matrix'], cam_calib['dist_coef'])
+
+projs = projs.reshape(-1, 2)
+
+
+# Draw voxel grid for debug
+img = cv.imread('data/cam3/checkerboard.jpg')
+output = img.copy()
+for x, y in projs:  # Directly unpack x,y
+    if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
+        cv.circle(output, (int(x), int(y)), 
+                    2, (0, 255, 0), -1)
+
+cv.imshow('img', output)
+cv.waitKey(0)
+cv.destroyAllWindows()
+
+# TEST the voxel grid (VISUALIZATION) CAM4
 cam_calib = calib_data.get(4)
 only_voxels = np.stack([voxels['x'], voxels['y'], voxels['z']], axis=1)
 projs, _ = cv.projectPoints(only_voxels.astype(np.float32), cam_calib['rvec'], cam_calib['tvec'], cam_calib['matrix'], cam_calib['dist_coef'])
-#projs = projs.squeeze()
 
 projs = projs.reshape(-1, 2)
 
@@ -123,6 +199,7 @@ def voxel_grid():
     F3 = silhouettes['cam3']
     F4 = silhouettes['cam4']
     for p in P:
+        num_ons = 0
         cam_calib = calib_data.get(1)
         p2 = np.array([p['x'], p['y'], p['z']], dtype=np.float32)
         projected, _ = cv.projectPoints(p2, cam_calib['rvec'], cam_calib['tvec'], cam_calib['matrix'], cam_calib['dist_coef'])
@@ -133,25 +210,56 @@ def voxel_grid():
         x_c1 = round(projected[0])
         y_c1 = round(projected[1])
         if (pixel_is_white(F1, x_c1, y_c1)):
+            num_ons += 1
             cam_calib = calib_data.get(2)
             projected, _ = cv.projectPoints(p2, cam_calib['rvec'], cam_calib['tvec'], cam_calib['matrix'], cam_calib['dist_coef'])
             projected = projected.flatten()
             x_c2 = round(projected[0])
             y_c2 = round(projected[1])
             if (pixel_is_white(F2, x_c2, y_c2)):
+                num_ons += 1
                 cam_calib = calib_data.get(3)
                 projected, _ = cv.projectPoints(p2, cam_calib['rvec'], cam_calib['tvec'], cam_calib['matrix'], cam_calib['dist_coef'])
                 projected = projected.flatten()
                 x_c3 = round(projected[0])
                 y_c3 = round(projected[1])
                 if (pixel_is_white(F3, x_c3, y_c3)):
+                    num_ons += 1
                     cam_calib = calib_data.get(4)
                     projected, _ = cv.projectPoints(p2, cam_calib['rvec'], cam_calib['tvec'], cam_calib['matrix'], cam_calib['dist_coef'])
                     projected = projected.flatten()
                     x_c4 = round(projected[0])
                     y_c4 = round(projected[1])
                     if (pixel_is_white(F4, x_c4, y_c4)):
-                        p['occupied'] = True
-                        print("was on")
+                        num_ons += 1
+                        print("all was on")
+        if num_ons >= 3:
+            p['occupied'] = True
+    return P
 
-voxel_grid()
+P = voxel_grid()
+
+# TEST the voxel grid (VISUALIZATION)
+cam_calib = calib_data.get(2)
+only_voxels = np.stack([voxels['x'], voxels['y'], voxels['z']], axis=1)
+only_voxels_on = []
+for p in P:
+    if p['occupied']:
+        only_voxels_on.append([p['x'], p['y'], p['z']])
+only_voxels_on = np.array(only_voxels_on)
+projs, _ = cv.projectPoints(only_voxels_on.astype(np.float32), cam_calib['rvec'], cam_calib['tvec'], cam_calib['matrix'], cam_calib['dist_coef'])
+
+projs = projs.reshape(-1, 2)
+
+
+# Draw voxel grid for debug
+img = cv.imread('data/cam2/checkerboard.jpg')
+output = img.copy()
+for x, y in projs:  # Directly unpack x,y
+    if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
+        cv.circle(output, (int(x), int(y)), 
+                    2, (0, 255, 0), -1)
+
+cv.imshow('img', output)
+cv.waitKey(0)
+cv.destroyAllWindows()

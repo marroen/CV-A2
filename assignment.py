@@ -2,6 +2,9 @@ import glm
 import random
 import numpy as np
 
+# A2 file imports
+from voxel_reconstruction import voxel_grid
+
 block_size = 1.0
 
 
@@ -19,13 +22,22 @@ def generate_grid(width, depth):
 def set_voxel_positions(width, height, depth):
     # Generates random voxel locations
     # TODO: You need to calculate proper voxel arrays instead of random ones.
+
+    P = voxel_grid()
     data, colors = [], []
+
+    for p in P:
+        data.append([p['x']*block_size - width/2, p['y']*block_size, p['z']*block_size - depth/2])
+        colors.append([1.0, 0, 0] if p['occupied'] else [0, 0, 0])
+    
+
+    '''
     for x in range(width):
         for y in range(height):
             for z in range(depth):
                 if random.randint(0, 1000) < 5:
                     data.append([x*block_size - width/2, y*block_size, z*block_size - depth/2])
-                    colors.append([x / width, z / depth, y / height])
+                    colors.append([x / width, z / depth, y / height])'''
     return data, colors
 
 
