@@ -38,15 +38,19 @@ for cam in cams:
     display_video_frames(silhouettes[cam])
 
 # Given a silhouettes array, frame number, and pixel coordinate, check if the pixel is white
-def pixel_is_white(silhouettes, frame_index, x, y):
+def pixel_is_white(silhouettes, x, y):
     
-    frame = silhouettes[frame_index]
+    for i in range(100):
+        frame = silhouettes[i]
+        # Continue if pixel is ON
+        if frame[y, x] == 255:
+            continue
+        # Return False if the pixel is OFF
+        else:
+            return False
+    return True
 
-    # Return true if the pixel is white
-    if frame[y, x] == 255:
-        return True
-    else:
-        return False
+    
 
 # Define voxel data type
 voxel_dtype = np.dtype([
@@ -55,15 +59,6 @@ voxel_dtype = np.dtype([
     ('z', np.int32),
     ('occupied', np.bool_)
 ])
-
-'''
-# Initialize voxel grid parameters
-GRID_WIDTH = 200   # X-axis (left-right)
-GRID_DEPTH = 150    # Y-axis (front-back)
-GRID_HEIGHT = 300   # Z-axis (vertical)
-VOXEL_SIZE = 6.0   # Physical size of each voxel cube
-SPACING = 6.0      # Space between voxels
-#PADDING = 10.0     # Padding around grid for visualization'''
 
 # Grid dimensions (voxel counts)
 GRID_WIDTH = 150    # X-axis (left-right)
@@ -78,7 +73,7 @@ SPACING = 0.0       # No spacing between voxels
 # Initialize voxel grid with proper dimensions
 voxels = np.zeros(GRID_WIDTH * GRID_DEPTH * GRID_HEIGHT, dtype=voxel_dtype)
 
-# Key concept: Voxel indices increase AWAY from the anchor point
+# Draw voxel grid, extending towards camera, from world origin
 index = 0
 for i in range(GRID_WIDTH):
     for j in range(GRID_DEPTH):
@@ -96,7 +91,7 @@ for i in range(GRID_WIDTH):
 calib_data = load_config()
 
 '''
-# TEST the voxel grid
+# TEST the voxel grid (VISUALIZATION)
 cam_calib = calib_data.get(4)
 only_voxels = np.stack([voxels['x'], voxels['y'], voxels['z']], axis=1)
 projs, _ = cv.projectPoints(only_voxels.astype(np.float32), cam_calib['rvec'], cam_calib['tvec'], cam_calib['matrix'], cam_calib['dist_coef'])
@@ -123,7 +118,10 @@ def voxel_grid():
     P = voxels
     #print(silhouettes['cam1'][0])
     #print(silhouettes['cam1'][0].shape)
-    F = silhouettes['cam1']
+    F1 = silhouettes['cam1']
+    F2 = silhouettes['cam2']
+    F3 = silhouettes['cam3']
+    F4 = silhouettes['cam4']
     for p in P:
         cam_calib = calib_data.get(1)
         p2 = np.array([p['x'], p['y'], p['z']], dtype=np.float32)
@@ -134,25 +132,25 @@ def voxel_grid():
         #print(type(projected))
         x_c1 = round(projected[0])
         y_c1 = round(projected[1])
-        if (pixel_is_white(silhouettes['cam1'], 0, x_c1, y_c1)):
+        if (pixel_is_white(F1, x_c1, y_c1)):
             cam_calib = calib_data.get(2)
             projected, _ = cv.projectPoints(p2, cam_calib['rvec'], cam_calib['tvec'], cam_calib['matrix'], cam_calib['dist_coef'])
             projected = projected.flatten()
             x_c2 = round(projected[0])
             y_c2 = round(projected[1])
-            if (pixel_is_white(silhouettes['cam2'], 0, x_c2, y_c2)):
+            if (pixel_is_white(F2, x_c2, y_c2)):
                 cam_calib = calib_data.get(3)
                 projected, _ = cv.projectPoints(p2, cam_calib['rvec'], cam_calib['tvec'], cam_calib['matrix'], cam_calib['dist_coef'])
                 projected = projected.flatten()
                 x_c3 = round(projected[0])
                 y_c3 = round(projected[1])
-                if (pixel_is_white(silhouettes['cam3'], 0, x_c3, y_c3)):
+                if (pixel_is_white(F3, x_c3, y_c3)):
                     cam_calib = calib_data.get(4)
                     projected, _ = cv.projectPoints(p2, cam_calib['rvec'], cam_calib['tvec'], cam_calib['matrix'], cam_calib['dist_coef'])
                     projected = projected.flatten()
                     x_c4 = round(projected[0])
                     y_c4 = round(projected[1])
-                    if (pixel_is_white(silhouettes['cam4'], 0, x_c4, y_c4)):
+                    if (pixel_is_white(F4, x_c4, y_c4)):
                         p['occupied'] = True
                         print("was on")
 
