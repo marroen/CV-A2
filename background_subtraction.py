@@ -75,11 +75,26 @@ def extract_largest_object(foreground_frame):
 
     return obj_frame
 
+# Generate a colorised foreground frame with black background
+def colorise_foreground(original_frame, foreground_frame):
+
+    # Convert foreground frame to binary
+    foreground_binary = cv.threshold(foreground_frame, 127, 255, cv.THRESH_BINARY)[1]
+    
+    # Get HSV representation of binary frame
+    foreground_colored = cv.cvtColor(foreground_binary, cv.COLOR_GRAY2BGR)
+    
+    # Combine with the original frame
+    colorised_foreground_frame = cv.bitwise_and(original_frame, foreground_colored)
+    
+    return colorised_foreground_frame
+
 # Performes background subtraction on the given video compared to the given background model
 def background_subtraction(background_model, vid, resolution):
 
     width, height = resolution
     foreground_silhouettes = []
+    colorised_foreground_silhouettes = []
 
     # Iterate through each frame
     frame_count = 0
@@ -110,11 +125,15 @@ def background_subtraction(background_model, vid, resolution):
 
         foreground_frame[mahalanobis_dist > threshold] = 255 # Set any pixel outide threshold to white
         foreground_frame = extract_largest_object(foreground_frame) # Only keeps the largest object
-        foreground_silhouettes.append(foreground_frame.copy()) # Append frame to array
+
+        colorised_foreground_frame = colorise_foreground(frame, foreground_frame) # Gets the colorised foreground 
+        
+        colorised_foreground_silhouettes.append(colorised_foreground_frame.copy())
+        foreground_silhouettes.append(foreground_frame.copy())
 
         frame_count += 1
 
     vid.release()
     print(f"background_subtraction: Processed {frame_count} frames\n")
-    return(foreground_silhouettes)
+    return foreground_silhouettes, colorised_foreground_silhouettes
 

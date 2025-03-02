@@ -20,7 +20,8 @@ resolution = (width, height)
 background_models = {cam: compute_gaussian_model(resolution, vid=background_videos[cam]) for cam in cams}
 
 # Get the silhouette frames for each camera
-silhouettes = {cam: background_subtraction(background_models[cam], foreground_videos[cam], resolution) for cam in cams}
+silhouettes = {cam: background_subtraction(background_models[cam], foreground_videos[cam], resolution)[0] for cam in cams}
+colorised_silhouettes = {cam: background_subtraction(background_models[cam], foreground_videos[cam], resolution)[1] for cam in cams}
 
 # Plays a video of the given frames
 def display_video_frames(frames, fps=120):
