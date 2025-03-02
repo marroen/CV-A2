@@ -33,27 +33,9 @@ def display_video_frames(frames, fps=120):
 
     cv.destroyAllWindows()
 
-# Plays a video of the given frames
-def display_video_frames_fr(frames, fps=120):
-
-    for i, frame in enumerate(frames):  # Add index tracking
-        cv.imshow("Video", frame)
-        
-        # Pause at frame 50
-        if i == 50:
-            print("Paused at frame 50. Press any key to continue...")
-            cv.waitKey(0)  # Wait indefinitely until a key is pressed
-        
-        # Continue normal playback
-        if cv.waitKey(int(1000 / fps)) & 0xFF == 27:
-            break
-
-    cv.destroyAllWindows()
-
-
 # Plays a short video of each silhouette view
 for cam in cams:
-    display_video_frames_fr(silhouettes[cam])
+    display_video_frames(silhouettes[cam])
 
 # Given a silhouettes array, frame number, and pixel coordinate, check if the pixel is white
 def pixel_is_white(silhouettes, x, y):
