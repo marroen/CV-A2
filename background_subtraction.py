@@ -46,17 +46,18 @@ def compute_gaussian_model(resolution, vid=None, hsv_frames=None):
 
     return gaussian_model
 
+# CHOICE TASK
 # Automatically determines the distance threshold for background subtraction
 # Brighter pixel = logarithmically larger threshold
 def auto_threshold(background_model, multiplier=8):
 
-    # Gets the intensity (V channel) of the pixel
+    # Gets the intensity (V channel) of every pixel
     pixel_intensity = background_model[:, :, 2] + 1e-6
 
     # Brighter pixel = logarithmically larger threshold
     threshold = multiplier * np.log1p(pixel_intensity)
 
-    return threshold
+    return threshold # Returns threshold array containing custom threshold for every pixel
 
 # Finds the largest object in a foreground frame and returns the frame with only that object
 def extract_largest_object(foreground_frame):
