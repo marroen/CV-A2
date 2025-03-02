@@ -12,9 +12,10 @@ from assignment import set_voxel_positions, generate_grid, get_cam_positions, ge
 from engine.camera import Camera
 from engine.config import config
 
-# A2 import
+# A2 file imports
 import project
 import calibration_processing
+#from voxel_reconstruction import voxel_grid
 
 cube, hdrbuffer, blurbuffer, lastPosX, lastPosY = None, None, None, None, None
 firstTime = True
@@ -66,6 +67,17 @@ def main():
 
     # END A2 Task 1
 
+    '''P = voxel_grid()
+    print(P)
+    print(type(P))
+    print(P.shape)
+    count = 0
+    for p in P:
+        if p['occupied']:
+            print(p)
+            count += 1
+    print(count)'''
+    
     glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
     glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
     glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
