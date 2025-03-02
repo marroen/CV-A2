@@ -34,8 +34,8 @@ def display_video_frames(frames, fps=120):
     cv.destroyAllWindows()
 
 # Plays a short video of each silhouette view
-for cam in cams:
-    display_video_frames(silhouettes[cam])
+#for cam in cams:
+    #display_video_frames(silhouettes[cam])
 
 # Given a silhouettes array and pixel coordinate, check if the pixel is white
 def pixel_is_white(silhouettes, x, y):
@@ -85,6 +85,12 @@ GRID_WIDTH = 15    # X-axis (left-right)
 GRID_DEPTH = 18    # Y-axis (forward-back)
 GRID_HEIGHT = 30   # Z-axis (vertical)
 VOXEL_SIZE = 60.0    # Size of each voxel cube
+
+GRID_WIDTH = 30    # X-axis (left-right)
+GRID_DEPTH = 33    # Y-axis (forward-back)
+GRID_HEIGHT = 70   # Z-axis (vertical)
+VOXEL_SIZE = 6.0    # Size of each voxel cube
+
 ANCHOR = np.array([0.0, 0.0, 0.0])  # World coordinates of bottom-front-left corner
 
 # Initialize voxel grid with proper dimensions
@@ -186,14 +192,12 @@ for x, y in projs:  # Directly unpack x,y
 
 cv.imshow('img', output)
 cv.waitKey(0)
-cv.destroyAllWindows()'''
-
+cv.destroyAllWindows()
+'''
 
 def voxel_grid():
     print("Voxel Grid")
     P = voxels
-    #print(silhouettes['cam1'][0])
-    #print(silhouettes['cam1'][0].shape)
     F1 = silhouettes['cam1']
     F2 = silhouettes['cam2']
     F3 = silhouettes['cam3']
@@ -204,9 +208,6 @@ def voxel_grid():
         p2 = np.array([p['x'], p['y'], p['z']], dtype=np.float32)
         projected, _ = cv.projectPoints(p2, cam_calib['rvec'], cam_calib['tvec'], cam_calib['matrix'], cam_calib['dist_coef'])
         projected = projected.flatten()
-        #print(projected[0])
-        #print(projected)
-        #print(type(projected))
         x_c1 = round(projected[0])
         y_c1 = round(projected[1])
         if (pixel_is_white(F1, x_c1, y_c1)):
@@ -233,13 +234,39 @@ def voxel_grid():
                     if (pixel_is_white(F4, x_c4, y_c4)):
                         num_ons += 1
                         print("all was on")
-        if num_ons >= 3:
+        if num_ons >= 4:
             p['occupied'] = True
     return P
 
 P = voxel_grid()
 
-# TEST the voxel grid (VISUALIZATION)
+'''
+# TEST the voxel grid (VISUALIZATION) CAM1
+cam_calib = calib_data.get(1)
+only_voxels = np.stack([voxels['x'], voxels['y'], voxels['z']], axis=1)
+only_voxels_on = []
+for p in P:
+    if p['occupied']:
+        only_voxels_on.append([p['x'], p['y'], p['z']])
+only_voxels_on = np.array(only_voxels_on)
+projs, _ = cv.projectPoints(only_voxels_on.astype(np.float32), cam_calib['rvec'], cam_calib['tvec'], cam_calib['matrix'], cam_calib['dist_coef'])
+
+projs = projs.reshape(-1, 2)
+
+
+# Draw voxel grid for debug
+img = cv.imread('data/cam1/checkerboard.jpg')
+output = img.copy()
+for x, y in projs:  # Directly unpack x,y
+    if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
+        cv.circle(output, (int(x), int(y)), 
+                    2, (0, 255, 0), -1)
+
+cv.imshow('img', output)
+cv.waitKey(0)
+cv.destroyAllWindows()
+
+# TEST the voxel grid (VISUALIZATION) CAM2
 cam_calib = calib_data.get(2)
 only_voxels = np.stack([voxels['x'], voxels['y'], voxels['z']], axis=1)
 only_voxels_on = []
@@ -263,3 +290,53 @@ for x, y in projs:  # Directly unpack x,y
 cv.imshow('img', output)
 cv.waitKey(0)
 cv.destroyAllWindows()
+
+# TEST the voxel grid (VISUALIZATION) CAM3
+cam_calib = calib_data.get(3)
+only_voxels = np.stack([voxels['x'], voxels['y'], voxels['z']], axis=1)
+only_voxels_on = []
+for p in P:
+    if p['occupied']:
+        only_voxels_on.append([p['x'], p['y'], p['z']])
+only_voxels_on = np.array(only_voxels_on)
+projs, _ = cv.projectPoints(only_voxels_on.astype(np.float32), cam_calib['rvec'], cam_calib['tvec'], cam_calib['matrix'], cam_calib['dist_coef'])
+
+projs = projs.reshape(-1, 2)
+
+
+# Draw voxel grid for debug
+img = cv.imread('data/cam3/checkerboard.jpg')
+output = img.copy()
+for x, y in projs:  # Directly unpack x,y
+    if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
+        cv.circle(output, (int(x), int(y)), 
+                    2, (0, 255, 0), -1)
+
+cv.imshow('img', output)
+cv.waitKey(0)
+cv.destroyAllWindows()
+
+# TEST the voxel grid (VISUALIZATION) CAM4
+cam_calib = calib_data.get(4)
+only_voxels = np.stack([voxels['x'], voxels['y'], voxels['z']], axis=1)
+only_voxels_on = []
+for p in P:
+    if p['occupied']:
+        only_voxels_on.append([p['x'], p['y'], p['z']])
+only_voxels_on = np.array(only_voxels_on)
+projs, _ = cv.projectPoints(only_voxels_on.astype(np.float32), cam_calib['rvec'], cam_calib['tvec'], cam_calib['matrix'], cam_calib['dist_coef'])
+
+projs = projs.reshape(-1, 2)
+
+
+# Draw voxel grid for debug
+img = cv.imread('data/cam4/checkerboard.jpg')
+output = img.copy()
+for x, y in projs:  # Directly unpack x,y
+    if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
+        cv.circle(output, (int(x), int(y)), 
+                    2, (0, 255, 0), -1)
+
+cv.imshow('img', output)
+cv.waitKey(0)
+cv.destroyAllWindows()'''

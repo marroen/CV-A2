@@ -11,6 +11,7 @@ def get_intrinsics():
     rows = 6
     cols = 8
     stride = 115
+    grid = (cols, rows)
     
     # Get all points from each camera
     cam1_points = project.get_all_points(25, rows, cols, stride, video_path='data/cam1/intrinsics.avi', calibration=True)
@@ -41,6 +42,10 @@ def get_intrinsics():
 def get_extrinsics(cam, objp):
     """Get extrinsic parameters for a specific camera using its checkerboard image"""
     print(f"Processing camera {cam}")
+
+    rows = 6
+    cols = 8
+    grid = (cols, rows)
     
     # Load intrinsic calibration
     cam_calib = load_calibration(f'data/cam{cam}')
@@ -52,6 +57,8 @@ def get_extrinsics(cam, objp):
     
     # Corner detection and refinement
     criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+
+    '''
     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
     ret, corners = cv.findChessboardCorners(gray, (8, 6), None)
     
@@ -66,7 +73,35 @@ def get_extrinsics(cam, objp):
         preprocessed = project.preprocessing(img)
         refined_corners = cv.cornerSubPix(preprocessed, test_points[1], (11,11), (-1,-1), criteria)
         _, rvec, tvec = cv.solvePnP(objp, refined_corners, cam_calib.matrix, cam_calib.distortion_coef)
-        return rvec, tvec
+        return rvec, tvec'''
+    
+    preprocessed = project.preprocessing(frame)
+    interpolated_corners = project.manual_check(preprocessed)
+
+    # Use 2D ideal grid corners for homography
+    # Define 4 corners of the ideal 7x7 grid (2D!)
+    ideal_manual_points = np.array([
+        [0, 0],    # top-left
+        [grid[0]-1, 0],    # top-right (7x7 grid has 0-6 in x)
+        [grid[0]-1, grid[1]-1],    # bottom-right
+        [0, grid[1]-1]     # bottom-left
+    ], dtype=np.float32).reshape(-1, 1, 2)
+
+    # Compute homography
+    H, _ = cv.findHomography(ideal_manual_points, interpolated_corners)
+    x, y = np.meshgrid(np.arange(grid[0]), np.arange(grid[1]))
+    ideal_grid = np.float32(np.vstack([x.ravel(), y.ravel()]).T).reshape(-1, 1, 2)
+    interpolated_corners = cv.perspectiveTransform(ideal_grid, H).reshape(-1, 2)
+
+    # Draw and display the corners
+    draw_img = frame.copy()
+    cv.drawChessboardCorners(draw_img, grid, interpolated_corners, True)
+    cv.imshow('img', draw_img)
+    cv.waitKey(500)
+    
+    refined_corners = cv.cornerSubPix(preprocessed, interpolated_corners, (11,11), (-1,-1), criteria)
+    _, rvec, tvec = cv.solvePnP(objp, refined_corners, cam_calib.matrix, cam_calib.distortion_coef)
+    return rvec, tvec
     
 # After running the calibration, save the calibration data to a camera-specific XML file
 def save_calibration(camera_dir, calibration):

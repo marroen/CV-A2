@@ -15,7 +15,7 @@ from engine.config import config
 # A2 file imports
 import project
 import calibration_processing
-from voxel_reconstruction import voxel_grid
+#from voxel_reconstruction import voxel_grid
 
 cube, hdrbuffer, blurbuffer, lastPosX, lastPosY = None, None, None, None, None
 firstTime = True

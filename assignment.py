@@ -27,8 +27,10 @@ def set_voxel_positions(width, height, depth):
     data, colors = [], []
 
     for p in P:
-        data.append([p['x']*block_size - width/2, p['y']*block_size, p['z']*block_size - depth/2])
-        colors.append([1.0, 0, 0] if p['occupied'] else [0, 0, 0])
+        if p['occupied']:
+            print("Occupied")
+        data.append([(p['x']/643)*128, 2, (p['z']/485)*64])
+        colors.append([0, 1.0, 0] if p['occupied'] else [0, 0, 1.0])
     
 
     '''
